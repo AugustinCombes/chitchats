@@ -9,13 +9,20 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "This app needs access to your microphone to transcribe conversations."
+      },
+      "bundleIdentifier": "com.augustuscombus.blablabla"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": [
+        "RECORD_AUDIO"
+      ],
       "edgeToEdgeEnabled": true
     },
     "web": {
