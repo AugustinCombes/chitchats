@@ -43,7 +43,7 @@ async def entrypoint(ctx: JobContext):
     
     # Configure transcription with speaker diarization
     conf = TranscriptionConfig(
-        language="en",
+        language="fr",
         diarization="speaker",
         enable_partials=True,
         max_delay=2,
@@ -61,34 +61,34 @@ async def entrypoint(ctx: JobContext):
     # Event handlers for Speechmatics
     def on_final_transcript(msg):
         try:
-            logger.info(f"Raw transcript: {msg}")
+            # logger.info(f"Raw transcript: {msg}")
             
             # Try to extract results from different possible structures
             results = None
             if isinstance(msg, dict):
-                logger.debug(f"Message keys: {list(msg.keys())}")
+                # logger.debug(f"Message keys: {list(msg.keys())}")
                 if 'results' in msg:
                     results = msg['results']
-                    logger.debug(f"Found results in msg['results']: {results}")
+                    # logger.debug(f"Found results in msg['results']: {results}")
                 elif 'metadata' in msg and 'results' in msg['metadata']:
                     results = msg['metadata']['results']
-                    logger.debug(f"Found results in msg['metadata']['results']: {results}")
+                    # logger.debug(f"Found results in msg['metadata']['results']: {results}")
                 else:
                     # Maybe the message itself is a result
                     results = [msg]
-                    logger.debug(f"Using msg as single result: {results}")
+                    # logger.debug(f"Using msg as single result: {results}")
             
             if results:
-                logger.debug(f"Processing {len(results)} results")
+                # logger.debug(f"Processing {len(results)} results")
                 for i, result in enumerate(results):
-                    logger.debug(f"Result {i}: {result}")
+                    # logger.debug(f"Result {i}: {result}")
                     alternatives = result.get('alternatives', [])
                     if alternatives:
                         text = alternatives[0].get('content', '')
                         speaker = alternatives[0].get('speaker', 'unknown')
                         start_time = result.get('start_time', 0.0)
                         
-                        logger.debug(f"Extracted: text='{text}', speaker='{speaker}', time={start_time}")
+                        # logger.debug(f"Extracted: text='{text}', speaker='{speaker}', time={start_time}")
                         
                         if text.strip():
                             if speaker not in speaker_messages:
@@ -99,7 +99,7 @@ async def entrypoint(ctx: JobContext):
                                 'timestamp': start_time
                             })
                             
-                            logger.info(f"🎤 Speaker {speaker}: {text}")
+                            # logger.info(f"🎤 Speaker {speaker}: {text}")
                             
                             # Send to frontend - we need to schedule this in the event loop
                             message_data = {
@@ -109,7 +109,7 @@ async def entrypoint(ctx: JobContext):
                                 'timestamp': start_time
                             }
                             
-                            logger.info(f"Sending to frontend: {message_data}")
+                            # logger.info(f"Sending to frontend: {message_data}")
                             
                             # Schedule the coroutine in the main event loop
                             try:

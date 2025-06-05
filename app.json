@@ -21,9 +21,11 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
+        "RECORD_AUDIO",
         "RECORD_AUDIO"
       ],
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.augustuscombus.blablabla"
     },
     "web": {
       "bundler": "metro",
