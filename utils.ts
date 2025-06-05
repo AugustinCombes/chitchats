@@ -31,7 +31,7 @@ export const generateAPIUrl = (relativePath: string) => {
 export const LIVEKIT_URL = process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://your-app.livekit.cloud';
 
 // Generate JWT token for LiveKit connection directly (for development)
-export const generateToken = async (roomName: string, participantIdentity: string) => {
+export const generateToken = async (roomName: string, participantIdentity: string, language: string = 'en') => {
   try {
     // For development, generate token directly on client
     // In production, this should be done on a secure backend
@@ -66,6 +66,7 @@ export const generateToken = async (roomName: string, participantIdentity: strin
         canSubscribe: true,
         canPublishData: true,
       },
+      language: language, // Add language parameter
     };
 
     const encodedHeader = Base64.encode(JSON.stringify(header)).replace(/[=]/g, '').replace(/\+/g, '-').replace(/\//g, '_');

@@ -5,7 +5,7 @@ const LIVEKIT_API_SECRET = process.env.EXPO_PUBLIC_LIVEKIT_API_SECRET || '';
 
 export async function POST(req: Request) {
   try {
-    const { roomName, participantIdentity } = await req.json();
+    const { roomName, participantIdentity, language = 'en' } = await req.json();
 
     if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
       return new Response(
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
         canPublishData: true,
       },
       kind: 'standard',
+      language: language, // Add language parameter
     };
 
     const token = jwt.sign(payload, LIVEKIT_API_SECRET, { algorithm: 'HS256' });

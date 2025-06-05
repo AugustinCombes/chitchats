@@ -10,6 +10,7 @@ from speechmatics.models import ConnectionSettings, TranscriptionConfig, AudioSe
 import threading
 import queue
 import io
+import jwt
 
 load_dotenv()
 
@@ -28,7 +29,26 @@ if not os.getenv("SPEECHMATICS_API_KEY"):
 
 async def entrypoint(ctx: JobContext):
     logger.info(f"Agent session started for room: {ctx.room.name}")
+    
+    # Language will be extracted from the room name which contains the language code
+    language = "en"  # Default language
+    
+    # Parse language from room name if it follows a pattern
+    # For example: conversation-1234567890-fr or conversation-1234567890-en
+    try:
+        room_parts = ctx.room.name.split('-')
+        logger.info(f"Room name parts: {room_parts}")
+        if len(room_parts) >= 3 and room_parts[-1] in ['en', 'fr']:
+            language = room_parts[-1]
+            logger.info(f"Language extracted from room name: {language}")
+        else:
+            logger.warning(f"Could not extract language from room name pattern, using default: {language}")
+    except Exception as e:
+        logger.warning(f"Could not extract language from room name: {e}")
+    
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    
+    logger.info(f"Agent connected with language: {language}")
     
     # Store messages by speaker
     speaker_messages = {}
@@ -39,16 +59,16 @@ async def entrypoint(ctx: JobContext):
     # Create a queue for audio data
     audio_queue = queue.Queue()
     
-    # We'll create the client later when we start streaming
-    
     # Configure transcription with speaker diarization
     conf = TranscriptionConfig(
-        language="fr",
+        language=language,
         diarization="speaker",
         enable_partials=True,
         max_delay=2,
         operating_point="enhanced",  # Better accuracy
     )
+    
+    logger.info(f"Transcription config created with language: {language}")
     
     # Audio settings for real-time streaming
     audio_settings = AudioSettings(
@@ -177,12 +197,12 @@ async def entrypoint(ctx: JobContext):
     
     audio_stream = AudioStream(audio_queue)
     sm_client = None  # Store client reference for cleanup
-    
+
     # Start Speechmatics in a thread
     def run_speechmatics():
         nonlocal sm_client
         try:
-            logger.info("Starting Speechmatics client...")
+            logger.info(f"Starting Speechmatics client with language: {language}")
             
             # Create client
             sm_client = speechmatics.client.WebsocketClient(
@@ -198,14 +218,9 @@ async def entrypoint(ctx: JobContext):
                 event_handler=on_final_transcript,
             )
             
-            # sm_client.add_event_handler(
-            #     event_name=speechmatics.models.ServerMessageType.AddPartialTranscript,
-            #     event_handler=lambda msg: logger.debug(f"Partial transcript: {msg}"),
-            # )
-            
             # Add recognition started handler
             def on_recognition_started(msg):
-                logger.info(f"Recognition started: {msg}")
+                logger.info(f"Recognition started with language {language}: {msg}")
                 
             sm_client.add_event_handler(
                 event_name=speechmatics.models.ServerMessageType.RecognitionStarted,

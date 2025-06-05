@@ -10,6 +10,8 @@ interface TranscriptionMessage {
   color: string;
 }
 
+type Language = 'en' | 'fr';
+
 const SPEAKER_COLORS = [
   '#007AFF', // Classic iMessage blue
   '#34C759', // iMessage green
@@ -31,6 +33,7 @@ export default function ConversationScreen() {
   const [speakerColors, setSpeakerColors] = useState<Map<string, string>>(new Map());
   const [isRecording, setIsRecording] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const scrollViewRef = useRef<ScrollView>(null);
   const colorIndexRef = useRef(0);
   const speakerColorsRef = useRef<Map<string, string>>(new Map());
@@ -194,12 +197,12 @@ export default function ConversationScreen() {
       // Start audio session
       await AudioSession.startAudioSession();
 
-      // Create room name
-      const roomName = `conversation-${Date.now()}`;
+      // Create room name with language
+      const roomName = `conversation-${Date.now()}-${selectedLanguage}`;
       const participantIdentity = `mobile-${Date.now()}`;
       
-      // Generate token directly (for POC - in production, do this on a secure backend)
-      const token = await generateToken(roomName, participantIdentity);
+      // Generate token with language parameter
+      const token = await generateToken(roomName, participantIdentity, selectedLanguage);
 
       // Connect to LiveKit room
       roomRef.current = new Room({
@@ -281,6 +284,12 @@ export default function ConversationScreen() {
       console.error('Error stopping recording:', error);
     } finally {
       setIsRecording(false);
+      // Reset to welcome state
+      setShowWelcome(true);
+      setMessages([]);
+      setSpeakerColors(new Map());
+      speakerColorsRef.current = new Map();
+      colorIndexRef.current = 0;
     }
   };
 
@@ -296,6 +305,28 @@ export default function ConversationScreen() {
     <SafeAreaView style={styles.container}>
       {showWelcome ? (
         <View style={styles.welcomeContainer}>
+          {/* Language Selector in top right */}
+          <View style={styles.languageSelectorContainer}>
+            <TouchableOpacity
+              style={[styles.languageToggle, selectedLanguage === 'en' && styles.languageToggleActive]}
+              onPress={() => setSelectedLanguage('en')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.languageToggleText, selectedLanguage === 'en' && styles.languageToggleTextActive]}>
+                EN
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.languageToggle, selectedLanguage === 'fr' && styles.languageToggleActive]}
+              onPress={() => setSelectedLanguage('fr')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.languageToggleText, selectedLanguage === 'fr' && styles.languageToggleTextActive]}>
+                FR
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Animated.Text style={[styles.blaText, styles.bla1, { opacity: fadeAnim1 }]}>
             bla
           </Animated.Text>
@@ -355,6 +386,38 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  languageSelectorContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  languageToggle: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+    minWidth: 50,
+    alignItems: 'center',
+  },
+  languageToggleActive: {
+    backgroundColor: '#007AFF',
+  },
+  languageToggleText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  languageToggleTextActive: {
+    color: '#FFFFFF',
   },
   blaText: {
     fontSize: 48,

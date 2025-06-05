@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, Text, SafeAreaView, TouchableOpacity, StyleSheet, Alert, Animated } from 'react-native';
 import { Room, RoomEvent } from 'livekit-client';
 import { LIVEKIT_URL, generateToken } from '@/utils';
+import { router } from 'expo-router';
 
 interface TranscriptionMessage {
   speaker: string;
@@ -9,6 +10,8 @@ interface TranscriptionMessage {
   timestamp: number;
   color: string;
 }
+
+type Language = 'en' | 'fr';
 
 const SPEAKER_COLORS = [
   '#007AFF', // Classic iMessage blue
@@ -28,6 +31,7 @@ export default function ConversationScreen() {
   const [speakerColors, setSpeakerColors] = useState<Map<string, string>>(new Map());
   const [isRecording, setIsRecording] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const scrollViewRef = useRef<ScrollView>(null);
   const colorIndexRef = useRef(0);
   const speakerColorsRef = useRef<Map<string, string>>(new Map());
@@ -90,12 +94,12 @@ export default function ConversationScreen() {
     try {
       setShowWelcome(false);
       
-      // Create room name
-      const roomName = `conversation-${Date.now()}`;
+      // Create room name with language
+      const roomName = `conversation-${Date.now()}-${selectedLanguage}`;
       const participantIdentity = `web-${Date.now()}`;
       
-      // Generate token directly (for POC - in production, do this on a secure backend)
-      const token = await generateToken(roomName, participantIdentity);
+      // Generate token with language parameter
+      const token = await generateToken(roomName, participantIdentity, selectedLanguage);
 
       // Connect to LiveKit room
       roomRef.current = new Room({
@@ -171,6 +175,12 @@ export default function ConversationScreen() {
       console.error('Error stopping recording:', error);
     } finally {
       setIsRecording(false);
+      // Reset to welcome state
+      setShowWelcome(true);
+      setMessages([]);
+      setSpeakerColors(new Map());
+      speakerColorsRef.current = new Map();
+      colorIndexRef.current = 0;
     }
   };
 
@@ -186,6 +196,28 @@ export default function ConversationScreen() {
     <SafeAreaView style={styles.container}>
       {showWelcome ? (
         <View style={styles.welcomeContainer}>
+          {/* Language Selector in top right */}
+          <View style={styles.languageSelectorContainer}>
+            <TouchableOpacity
+              style={[styles.languageToggle, selectedLanguage === 'en' && styles.languageToggleActive]}
+              onPress={() => setSelectedLanguage('en')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.languageToggleText, selectedLanguage === 'en' && styles.languageToggleTextActive]}>
+                EN
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.languageToggle, selectedLanguage === 'fr' && styles.languageToggleActive]}
+              onPress={() => setSelectedLanguage('fr')}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.languageToggleText, selectedLanguage === 'fr' && styles.languageToggleTextActive]}>
+                FR
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <Animated.Text style={[styles.blaText, styles.bla1, { opacity: fadeAnim1 }]}>
             bla
           </Animated.Text>
@@ -245,6 +277,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  languageSelectorContainer: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    flexDirection: 'row',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    padding: 4,
+  },
+  languageToggle: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 16,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  languageToggleActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  languageToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  languageToggleTextActive: {
+    color: '#000000',
   },
   blaText: {
     fontSize: 48,
