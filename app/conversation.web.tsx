@@ -61,6 +61,13 @@ export default function ConversationScreen() {
 
   const startRecording = async () => {
     try {
+      // Debug environment variables
+      console.log('Debug - Environment variables:');
+      console.log('LIVEKIT_URL:', LIVEKIT_URL);
+      console.log('process.env.EXPO_PUBLIC_LIVEKIT_URL:', process.env.EXPO_PUBLIC_LIVEKIT_URL);
+      console.log('process.env.EXPO_PUBLIC_LIVEKIT_API_KEY:', process.env.EXPO_PUBLIC_LIVEKIT_API_KEY);
+      console.log('process.env.EXPO_PUBLIC_LIVEKIT_API_SECRET:', process.env.EXPO_PUBLIC_LIVEKIT_API_SECRET ? '[REDACTED]' : 'undefined');
+      
       // Request microphone permission
       const hasPermission = await requestMicrophonePermission();
       if (!hasPermission) {

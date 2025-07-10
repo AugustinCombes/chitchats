@@ -33,6 +33,11 @@ export const LIVEKIT_URL = process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://your-ap
 // Generate JWT token for LiveKit connection directly (for development)
 export const generateToken = async (roomName: string, participantIdentity: string, language: string = 'en') => {
   try {
+    console.log('generateToken - Debug info:');
+    console.log('Room name:', roomName);
+    console.log('Participant:', participantIdentity);
+    console.log('Language:', language);
+    
     // For development, generate token directly on client
     // In production, this should be done on a secure backend
     const { Base64 } = await import('js-base64');
@@ -40,8 +45,12 @@ export const generateToken = async (roomName: string, participantIdentity: strin
     
     const LIVEKIT_API_KEY = process.env.EXPO_PUBLIC_LIVEKIT_API_KEY;
     const LIVEKIT_API_SECRET = process.env.EXPO_PUBLIC_LIVEKIT_API_SECRET;
+    
+    console.log('LIVEKIT_API_KEY:', LIVEKIT_API_KEY);
+    console.log('LIVEKIT_API_SECRET present:', !!LIVEKIT_API_SECRET);
 
     if (!LIVEKIT_API_KEY || !LIVEKIT_API_SECRET) {
+      console.error('Missing LiveKit credentials');
       throw new Error('LiveKit API key and secret are required');
     }
 
