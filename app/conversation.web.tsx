@@ -414,7 +414,7 @@ const styles: Record<string, React.CSSProperties> = {
 };
 
 // Add CSS animations when component mounts
-if (typeof document !== 'undefined') {
+if (typeof document !== 'undefined' && typeof window !== 'undefined') {
   const addStyles = () => {
     if (!document.getElementById('conversation-web-styles')) {
       const styleSheet = document.createElement('style');
@@ -435,7 +435,10 @@ if (typeof document !== 'undefined') {
     }
   };
   
-  if (document.readyState === 'loading') {
+  // Ensure styles are added after hydration
+  if (typeof window.__EXPO_ROUTER_HYDRATE__ !== 'undefined') {
+    setTimeout(addStyles, 0);
+  } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', addStyles);
   } else {
     addStyles();

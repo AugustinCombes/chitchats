@@ -11,13 +11,29 @@ console.log(`Base path: ${basePath}`);
 function fixHtmlFile(filePath) {
   let content = fs.readFileSync(filePath, 'utf8');
   
-  // Fix asset paths
-  content = content.replace(/src="\/([^"]+)"/g, `src="${basePath}$1"`);
-  content = content.replace(/href="\/([^"]+)"/g, `href="${basePath}$1"`);
-  content = content.replace(/url\(\/([^)]+)\)/g, `url(${basePath}$1)`);
+  // Fix asset paths - but skip already fixed paths and data: URIs
+  content = content.replace(/src="\/([^"]+)"/g, (match, p1) => {
+    if (p1.startsWith(basePath.slice(1))) return match; // Already fixed
+    return `src="${basePath}${p1}"`;
+  });
+  
+  content = content.replace(/href="\/([^"]+)"/g, (match, p1) => {
+    if (p1.startsWith(basePath.slice(1))) return match; // Already fixed
+    return `href="${basePath}${p1}"`;
+  });
+  
+  content = content.replace(/url\(\/([^)]+)\)/g, (match, p1) => {
+    if (p1.startsWith(basePath.slice(1))) return match; // Already fixed
+    return `url(${basePath}${p1})`;
+  });
   
   // Fix font URLs in style tags
   content = content.replace(/url\(\/assets\//g, `url(${basePath}assets/`);
+  
+  // Add base tag for proper module resolution
+  if (!content.includes('<base')) {
+    content = content.replace('<head>', `<head>\n<base href="${basePath}">`);
+  }
   
   fs.writeFileSync(filePath, content);
   console.log(`Fixed: ${path.basename(filePath)}`);
