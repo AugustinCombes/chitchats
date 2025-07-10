@@ -1,12 +1,19 @@
-import { Redirect } from 'expo-router';
+import { useEffect } from 'react';
 import { Platform } from 'react-native';
-import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 
 export default function Index() {
-  // Get base path from config for web
-  const basePath = Platform.OS === 'web' 
-    ? (Constants.expoConfig?.extra?.basePath || '/')
-    : '/';
+  const router = useRouter();
   
-  return <Redirect href={`${basePath}conversation`} />;
+  useEffect(() => {
+    // Navigate to conversation page
+    if (Platform.OS === 'web') {
+      // For web, use replace to avoid back button issues
+      router.replace('/conversation');
+    } else {
+      router.push('/conversation');
+    }
+  }, [router]);
+  
+  return null;
 }

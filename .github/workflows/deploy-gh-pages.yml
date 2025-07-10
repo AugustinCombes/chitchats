@@ -45,6 +45,9 @@ jobs:
 
       - name: Add .nojekyll file
         run: touch ./dist/.nojekyll
+        
+      - name: Create 404 redirect
+        run: cp ./dist/index.html ./dist/404.html
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

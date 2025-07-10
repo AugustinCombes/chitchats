@@ -36,6 +36,15 @@ function fixJsFile(filePath) {
   content = content.replace(/href:"\/conversation"/g, `href:"${basePath}conversation"`);
   content = content.replace(/pathname:"\/conversation"/g, `pathname:"${basePath}conversation"`);
   
+  // Fix router paths
+  content = content.replace(/\.replace\("\/conversation"\)/g, `.replace("${basePath}conversation")`);
+  content = content.replace(/\.push\("\/conversation"\)/g, `.push("${basePath}conversation")`);
+  
+  // Fix base URL in runtime
+  if (basePath !== '/') {
+    content = content.replace(/window\.__PUBLIC_PATH__="\/"/g, `window.__PUBLIC_PATH__="${basePath}"`);
+  }
+  
   fs.writeFileSync(filePath, content);
   console.log(`Fixed: ${path.basename(filePath)}`);
 }
