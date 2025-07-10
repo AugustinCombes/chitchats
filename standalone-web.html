@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blablabla - Conversation Transcription</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .welcome-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        .language-selector {
+            position: absolute;
+            top: 40px;
+            right: 40px;
+            display: flex;
+            background: #fff;
+            border-radius: 25px;
+            padding: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+        }
+        
+        .language-btn {
+            padding: 10px 20px;
+            border-radius: 20px;
+            min-width: 50px;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            font-weight: 700;
+            color: #000;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .language-btn.active {
+            background: #007AFF;
+            color: #fff;
+        }
+        
+        .bla-text {
+            position: absolute;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+        
+        .bla1 { top: 20%; left: 15%; font-size: 36px; font-weight: 300; opacity: 0.8; }
+        .bla2 { top: 35%; right: 20%; font-size: 56px; font-weight: 400; animation-delay: 0.6s; animation-fill-mode: both; }
+        .bla3 { bottom: 30%; left: 25%; font-size: 42px; font-weight: 300; opacity: 0.6; animation-delay: 1.2s; animation-fill-mode: both; }
+        
+        .record-button {
+            position: absolute;
+            bottom: 15%;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #FF3B30;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+            box-shadow: 0 0 20px rgba(255, 59, 48, 0.5);
+            animation: pulse 2s infinite;
+        }
+        
+        .record-button:hover {
+            transform: scale(1.1);
+        }
+        
+        .record-button-inner {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #fff;
+        }
+        
+        .messages-container {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            max-width: 800px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 16px;
+            border-radius: 18px;
+            max-width: 75%;
+            color: #fff;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+        
+        .floating-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: #007AFF;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+            transition: background-color 0.2s ease;
+        }
+        
+        .floating-button.active {
+            background: #FF3B30;
+        }
+        
+        .floating-button-inner {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+        }
+        
+        .floating-button.active .floating-button-inner {
+            width: 16px;
+            height: 16px;
+            border-radius: 2px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="welcomeScreen" class="welcome-container">
+            <div class="language-selector">
+                <button class="language-btn active" data-lang="en">EN</button>
+                <button class="language-btn" data-lang="fr">FR</button>
+            </div>
+            <div class="bla-text bla1">bla</div>
+            <div class="bla-text bla2">bla</div>
+            <div class="bla-text bla3">bla...</div>
+            <button class="record-button" id="startBtn">
+                <div class="record-button-inner"></div>
+            </button>
+        </div>
+        
+        <div id="recordingScreen" class="hidden">
+            <div class="messages-container" id="messages"></div>
+            <button class="floating-button" id="stopBtn">
+                <div class="floating-button-inner"></div>
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import LiveKit client
+        import { Room, RoomEvent } from 'https://unpkg.com/livekit-client@2.13.3/dist/livekit-client.esm.mjs';
+        
+        // Configuration
+        const LIVEKIT_URL = 'wss://your-app.livekit.cloud'; // Update this
+        const LIVEKIT_API_KEY = 'your-api-key'; // Update this
+        const LIVEKIT_API_SECRET = 'your-api-secret'; // Update this
+        
+        let room = null;
+        let selectedLanguage = 'en';
+        const messages = [];
+        const speakerColors = new Map();
+        let colorIndex = 0;
+        
+        const SPEAKER_COLORS = [
+            '#007AFF', '#34C759', '#FF9500', '#AF52DE', '#FF2D55',
+            '#5856D6', '#00C7BE', '#FF3B30', '#FFCC00', '#8E8E93'
+        ];
+        
+        // UI Elements
+        const welcomeScreen = document.getElementById('welcomeScreen');
+        const recordingScreen = document.getElementById('recordingScreen');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const messagesContainer = document.getElementById('messages');
+        const languageBtns = document.querySelectorAll('.language-btn');
+        
+        // Language selection
+        languageBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                languageBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedLanguage = btn.dataset.lang;
+            });
+        });
+        
+        // Simple token generation (NOT SECURE - for demo only)
+        async function generateToken(roomName, identity, language) {
+            // This should be done on a secure backend
+            alert('Token generation needs to be implemented on a backend server');
+            return 'dummy-token';
+        }
+        
+        function assignColor(speakerId) {
+            if (!speakerColors.has(speakerId)) {
+                const color = SPEAKER_COLORS[colorIndex % SPEAKER_COLORS.length];
+                colorIndex++;
+                speakerColors.set(speakerId, color);
+            }
+            return speakerColors.get(speakerId);
+        }
+        
+        function addMessage(speaker, text, timestamp) {
+            const color = assignColor(speaker);
+            
+            // Check if we should merge with last message
+            if (messages.length > 0 && messages[messages.length - 1].speaker === speaker) {
+                messages[messages.length - 1].text += ' ' + text;
+            } else {
+                messages.push({ speaker, text, timestamp, color });
+            }
+            
+            renderMessages();
+        }
+        
+        function renderMessages() {
+            messagesContainer.innerHTML = messages.map(msg => 
+                `<div class="message" style="background-color: ${msg.color}">${msg.text}</div>`
+            ).join('');
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        async function startRecording() {
+            try {
+                // Request microphone permission
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // Switch screens
+                welcomeScreen.classList.add('hidden');
+                recordingScreen.classList.remove('hidden');
+                
+                // Create room
+                const roomName = `conversation-${Date.now()}-${selectedLanguage}`;
+                const identity = `web-${Date.now()}`;
+                const token = await generateToken(roomName, identity, selectedLanguage);
+                
+                room = new Room({
+                    adaptiveStream: true,
+                    dynacast: true,
+                });
+                
+                // Handle transcriptions
+                room.on(RoomEvent.DataReceived, (payload) => {
+                    const decoder = new TextDecoder();
+                    const message = JSON.parse(decoder.decode(payload));
+                    
+                    if (message.type === 'transcription') {
+                        addMessage(message.speaker, message.text, message.timestamp);
+                    }
+                });
+                
+                // Connect to room
+                await room.connect(LIVEKIT_URL, token);
+                await room.localParticipant.setMicrophoneEnabled(true);
+                
+                stopBtn.classList.add('active');
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Failed to start recording. Please check your configuration.');
+                stopRecording();
+            }
+        }
+        
+        function stopRecording() {
+            if (room) {
+                room.localParticipant.setMicrophoneEnabled(false);
+                room.disconnect();
+                room = null;
+            }
+            
+            // Reset UI
+            recordingScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+            messages.length = 0;
+            speakerColors.clear();
+            colorIndex = 0;
+            messagesContainer.innerHTML = '';
+        }
+        
+        // Event listeners
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        
+        console.log('Standalone app loaded and ready!');
+    </script>
+</body>
+</html>
