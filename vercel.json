@@ -6,5 +6,11 @@
     "EXPO_PUBLIC_LIVEKIT_URL": "@livekit_url",
     "EXPO_PUBLIC_LIVEKIT_API_KEY": "@livekit_api_key", 
     "EXPO_PUBLIC_LIVEKIT_API_SECRET": "@livekit_api_secret"
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/"
+    }
+  ]
 }
