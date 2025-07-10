@@ -3,13 +3,21 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 
-// Register LiveKit globals
-import { registerGlobals } from '@livekit/react-native';
-registerGlobals();
+// Import global CSS for web
+if (Platform.OS === 'web') {
+  require('../global.css');
+}
+
+// Register LiveKit globals only for native platforms
+if (Platform.OS !== 'web') {
+  const { registerGlobals } = require('@livekit/react-native');
+  registerGlobals();
+}
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
