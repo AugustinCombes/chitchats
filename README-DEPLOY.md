@@ -37,3 +37,4 @@ npm run deploy:gh-pages
 - GitHub Pages is public - your app will be accessible to anyone
 - Make sure LiveKit credentials are set as GitHub Secrets (not Variables)
 - Test deployment with updated secrets
+- Secrets must be created as 3 separate repository secrets
