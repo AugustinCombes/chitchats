@@ -36,3 +36,4 @@ npm run deploy:gh-pages
 - For production, create a backend API to generate LiveKit tokens
 - GitHub Pages is public - your app will be accessible to anyone
 - Make sure LiveKit credentials are set as GitHub Secrets (not Variables)
+- Test deployment with updated secrets
