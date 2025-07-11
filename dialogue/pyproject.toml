@@ -1,16 +1,23 @@
-[project]
+[tool.poetry]
 name = "dialogue"
 version = "0.1.0"
-description = "Add your description here"
+description = "LiveKit dialogue agent with Speechmatics"
+authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "fastapi>=0.115.12",
-    "livekit>=1.0.8",
-    "livekit-agents[speechmatics]~=1.0",
-    "python-dotenv>=1.1.0",
-    "uvicorn>=0.34.2",
-    "websockets>=15.0.1",
-    "speechmatics-python>=1.0.0",
-    "PyJWT>=2.8.0",
-]
+packages = [{include = "dialogue"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = "^0.115.12"
+livekit = "^1.0.8"
+livekit-agents = {extras = ["speechmatics"], version = "^1.0"}
+python-dotenv = "^1.1.0"
+uvicorn = "^0.34.2"
+websockets = "^12.0"
+speechmatics-python = "^1.0.0"
+PyJWT = "^2.8.0"
+setuptools = "^70.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

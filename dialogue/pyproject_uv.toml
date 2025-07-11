@@ -1,0 +1,16 @@
+[project]
+name = "dialogue"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.12",
+    "livekit>=1.0.8",
+    "livekit-agents[speechmatics]~=1.0",
+    "python-dotenv>=1.1.0",
+    "uvicorn>=0.34.2",
+    "websockets>=15.0.1",
+    "speechmatics-python>=1.0.0",
+    "PyJWT>=2.8.0",
+]

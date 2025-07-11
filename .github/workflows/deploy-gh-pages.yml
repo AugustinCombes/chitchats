@@ -43,11 +43,13 @@ jobs:
       - name: Create environment file
         run: |
           cat > .env.production << EOF
-          EXPO_PUBLIC_LIVEKIT_URL=${{ secrets.EXPO_PUBLIC_LIVEKIT_URL }}
-          EXPO_PUBLIC_LIVEKIT_API_KEY=${{ secrets.EXPO_PUBLIC_LIVEKIT_API_KEY }}
-          EXPO_PUBLIC_LIVEKIT_API_SECRET=${{ secrets.EXPO_PUBLIC_LIVEKIT_API_SECRET }}
+          EXPO_PUBLIC_LIVEKIT_URL=wss://blablabla-2uvt2khr.livekit.cloud
+          EXPO_PUBLIC_LIVEKIT_API_KEY=API5h5RgjK5ChQH
+          EXPO_PUBLIC_LIVEKIT_API_SECRET=f0bzdG4AXy9OWF3VtfDyHpUzlZSIy7UGMwd4RuftSzJA
           EOF
           echo "Created .env.production file"
+          echo "Contents of .env.production:"
+          cat .env.production
           
       - name: Build Expo web
         env:

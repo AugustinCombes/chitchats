@@ -31,6 +31,7 @@ export default function ConversationScreen() {
   const [showWelcome, setShowWelcome] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [permissionError, setPermissionError] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const scrollViewRef = useRef<HTMLDivElement>(null);
   const colorIndexRef = useRef(0);
   const speakerColorsRef = useRef<Map<string, string>>(new Map());
@@ -61,6 +62,45 @@ export default function ConversationScreen() {
 
   const startRecording = async () => {
     try {
+      setIsConnecting(true);
+      
+      // Ensure Modal agent is running first
+      try {
+        const modalEndpoint = 'https://augustincombes--livekit-dialogue-agent-ensure-agent-running.modal.run';
+        console.log('Waking up Modal agent...');
+        
+        // Poll until agent is ready
+        let agentReady = false;
+        let attempts = 0;
+        const maxAttempts = 30; // 30 seconds max
+        
+        while (!agentReady && attempts < maxAttempts) {
+          const response = await fetch(modalEndpoint);
+          const data = await response.json();
+          console.log('Modal agent status:', data);
+          
+          if (data.agent_info && data.agent_info.ready) {
+            agentReady = true;
+            console.log('Modal agent is ready!');
+          } else if (data.status === 'error') {
+            throw new Error(data.message || 'Agent failed to start');
+          } else {
+            // Wait 1 second before next check
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            attempts++;
+          }
+        }
+        
+        if (!agentReady) {
+          throw new Error('Modal agent failed to start within 30 seconds');
+        }
+      } catch (err) {
+        console.error('Modal agent error:', err);
+        alert('Failed to start the speech recognition service. Please try again.');
+        setIsConnecting(false);
+        return;
+      }
+      
       // Debug environment variables
       console.log('Debug - Environment variables:');
       console.log('LIVEKIT_URL:', LIVEKIT_URL);
@@ -141,9 +181,11 @@ export default function ConversationScreen() {
       await roomRef.current.localParticipant.setMicrophoneEnabled(true);
       
       setIsRecording(true);
+      setIsConnecting(false);
     } catch (error) {
       console.error('Error starting recording:', error);
       alert('Failed to start recording. Please check your LiveKit configuration.');
+      setIsConnecting(false);
     }
   };
 
@@ -208,14 +250,19 @@ export default function ConversationScreen() {
             <button
               style={styles.recordButton}
               onClick={startRecording}
+              disabled={isConnecting}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'scale(1.1)';
+                if (!isConnecting) e.currentTarget.style.transform = 'scale(1.1)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'scale(1)';
+                if (!isConnecting) e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              <div style={styles.recordButtonInner} />
+              {isConnecting ? (
+                <div style={styles.connectingText}>Connecting...</div>
+              ) : (
+                <div style={styles.recordButtonInner} />
+              )}
             </button>
           </div>
 
