@@ -48,7 +48,7 @@ jobs:
           MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
         run: |
           cd dialogue
-          poetry install
+          poetry install --no-root
           poetry run modal deploy modal_agent.py
           cd ..
 

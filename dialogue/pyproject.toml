@@ -4,7 +4,6 @@ version = "0.1.0"
 description = "LiveKit dialogue agent with Speechmatics"
 authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-packages = [{include = "dialogue"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
