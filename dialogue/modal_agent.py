@@ -33,8 +33,8 @@ agent_ready = False
     cpu=1,
     memory=1024,
     timeout=0,  # Run indefinitely
-    container_idle_timeout=30,  # Keep container alive for 30 seconds after last request
-    keep_warm=1,  # Keep one instance always running
+    scaledown_window=30,  # Keep container alive for 30 seconds after last request
+    min_containers=1,  # Keep one instance always running
 )
 def run_livekit_agent():
     """Run the LiveKit agent and return when ready"""
@@ -115,7 +115,7 @@ def run_livekit_agent():
     secrets=secrets,
     timeout=20,
 )
-@modal.web_endpoint(method="GET")
+@modal.fastapi_endpoint(method="GET")
 def ensure_agent_running():
     """Endpoint to wake up the agent container if needed"""
     try:
