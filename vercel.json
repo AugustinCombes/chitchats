@@ -2,10 +2,15 @@
   "buildCommand": "expo export --platform web",
   "outputDirectory": "dist",
   "framework": null,
+  "functions": {
+    "api/speechmatics-token.js": {
+      "maxDuration": 10
+    }
+  },
   "env": {
-    "EXPO_PUBLIC_LIVEKIT_URL": "@livekit_url",
-    "EXPO_PUBLIC_LIVEKIT_API_KEY": "@livekit_api_key", 
-    "EXPO_PUBLIC_LIVEKIT_API_SECRET": "@livekit_api_secret"
+    "SPEECHMATICS_API_KEY": "@speechmatics_api_key",
+    "EXPO_PUBLIC_SUPABASE_URL": "@supabase_url",
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key"
   },
   "rewrites": [
     {
