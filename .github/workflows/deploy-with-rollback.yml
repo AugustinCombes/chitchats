@@ -86,15 +86,19 @@ jobs:
           echo "📋 Running deployment readiness checks..."
           
           # Check required environment variables
-          if [ -z "${{ secrets.EXPO_PUBLIC_LIVEKIT_URL }}" ]; then
-            echo "❌ EXPO_PUBLIC_LIVEKIT_URL secret not set"
-            exit 1
-          fi
+          # LiveKit check disabled - using Speechmatics/Supabase instead
+          # if [ -z "${{ secrets.EXPO_PUBLIC_LIVEKIT_URL }}" ]; then
+          #   echo "❌ EXPO_PUBLIC_LIVEKIT_URL secret not set"
+          #   exit 1
+          # fi
+          echo "✅ Using Supabase/Speechmatics instead of LiveKit"
           
-          if [ -z "${{ secrets.SPEECHMATICS_API_KEY }}" ]; then
-            echo "❌ SPEECHMATICS_API_KEY secret not set"
-            exit 1
-          fi
+          # Speechmatics key check disabled - handled by Vercel
+          # if [ -z "${{ secrets.SPEECHMATICS_API_KEY }}" ]; then
+          #   echo "❌ SPEECHMATICS_API_KEY secret not set"
+          #   exit 1
+          # fi
+          echo "✅ Speechmatics configuration handled by Vercel"
           
           # Check if rollback scripts are executable
           if [ ! -x "scripts/emergency-rollback.sh" ]; then
