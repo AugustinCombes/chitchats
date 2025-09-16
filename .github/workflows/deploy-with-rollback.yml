@@ -217,7 +217,7 @@ jobs:
           tar -czf deployment-package.tar.gz dist/ scripts/ package.json
           
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-package-${{ needs.pre-deployment.outputs.deployment-id }}
           path: deployment-package.tar.gz
@@ -237,7 +237,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Download deployment package
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: deployment-package-${{ needs.pre-deployment.outputs.deployment-id }}
           
@@ -312,7 +312,7 @@ jobs:
         uses: actions/checkout@v4
         
       - name: Download deployment package
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: deployment-package-${{ needs.pre-deployment.outputs.deployment-id }}
           
