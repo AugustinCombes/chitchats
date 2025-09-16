@@ -7,11 +7,6 @@
       "maxDuration": 10
     }
   },
-  "env": {
-    "SPEECHMATICS_API_KEY": "@speechmatics_api_key",
-    "EXPO_PUBLIC_SUPABASE_URL": "@supabase_url",
-    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "@supabase_anon_key"
-  },
   "rewrites": [
     {
       "source": "/(.*)",
