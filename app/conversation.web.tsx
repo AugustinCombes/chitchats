@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Room, RoomEvent } from 'livekit-client';
-import { LIVEKIT_URL, generateToken } from '@/utils';
+import { useSpeechmaticsTranscription } from '../hooks/useSpeechmaticsTranscription';
 
 interface TranscriptionMessage {
   speaker: string;
@@ -25,27 +24,32 @@ const SPEAKER_COLORS = [
 ];
 
 export default function ConversationScreen() {
-  const [messages, setMessages] = useState<TranscriptionMessage[]>([]);
-  const [speakerColors, setSpeakerColors] = useState<Map<string, string>>(new Map());
-  const [isRecording, setIsRecording] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('en');
   const [permissionError, setPermissionError] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
+  const [displayMessages, setDisplayMessages] = useState<TranscriptionMessage[]>([]);
+  const [speakerColors, setSpeakerColors] = useState<Map<string, string>>(new Map());
   const scrollViewRef = useRef<HTMLDivElement>(null);
   const colorIndexRef = useRef(0);
-  const speakerColorsRef = useRef<Map<string, string>>(new Map());
-  const roomRef = useRef<Room | null>(null);
+  
+  const {
+    messages,
+    isConnected,
+    isRecording,
+    error,
+    connect,
+    startRecording,
+    stopRecording
+  } = useSpeechmaticsTranscription();
 
   const assignColor = (speakerId: string): string => {
-    if (!speakerColorsRef.current.has(speakerId)) {
+    if (!speakerColors.has(speakerId)) {
       const newColor = SPEAKER_COLORS[colorIndexRef.current % SPEAKER_COLORS.length];
       colorIndexRef.current++;
-      speakerColorsRef.current.set(speakerId, newColor);
-      setSpeakerColors(new Map(speakerColorsRef.current));
+      setSpeakerColors(prev => new Map(prev).set(speakerId, newColor));
       return newColor;
     }
-    return speakerColorsRef.current.get(speakerId)!;
+    return speakerColors.get(speakerId)!;
   };
 
   const requestMicrophonePermission = async () => {
@@ -60,54 +64,8 @@ export default function ConversationScreen() {
     }
   };
 
-  const startRecording = async () => {
+  const handleStartRecording = async () => {
     try {
-      setIsConnecting(true);
-      
-      // Ensure Modal agent is running first
-      try {
-        const modalEndpoint = 'https://augustincombes--livekit-dialogue-agent-ensure-agent-running.modal.run';
-        console.log('Waking up Modal agent...');
-        
-        // Poll until agent is ready
-        let agentReady = false;
-        let attempts = 0;
-        const maxAttempts = 30; // 30 seconds max
-        
-        while (!agentReady && attempts < maxAttempts) {
-          const response = await fetch(modalEndpoint);
-          const data = await response.json();
-          console.log('Modal agent status:', data);
-          
-          if (data.agent_info && data.agent_info.ready) {
-            agentReady = true;
-            console.log('Modal agent is ready!');
-          } else if (data.status === 'error') {
-            throw new Error(data.message || 'Agent failed to start');
-          } else {
-            // Wait 1 second before next check
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            attempts++;
-          }
-        }
-        
-        if (!agentReady) {
-          throw new Error('Modal agent failed to start within 30 seconds');
-        }
-      } catch (err) {
-        console.error('Modal agent error:', err);
-        alert('Failed to start the speech recognition service. Please try again.');
-        setIsConnecting(false);
-        return;
-      }
-      
-      // Debug environment variables
-      console.log('Debug - Environment variables:');
-      console.log('LIVEKIT_URL:', LIVEKIT_URL);
-      console.log('process.env.EXPO_PUBLIC_LIVEKIT_URL:', process.env.EXPO_PUBLIC_LIVEKIT_URL);
-      console.log('process.env.EXPO_PUBLIC_LIVEKIT_API_KEY:', process.env.EXPO_PUBLIC_LIVEKIT_API_KEY);
-      console.log('process.env.EXPO_PUBLIC_LIVEKIT_API_SECRET:', process.env.EXPO_PUBLIC_LIVEKIT_API_SECRET ? '[REDACTED]' : 'undefined');
-      
       // Request microphone permission
       const hasPermission = await requestMicrophonePermission();
       if (!hasPermission) {
@@ -117,104 +75,58 @@ export default function ConversationScreen() {
 
       setShowWelcome(false);
       
-      // Create room name with language
-      const roomName = `conversation-${Date.now()}-${selectedLanguage}`;
-      const participantIdentity = `web-${Date.now()}`;
-      
-      // Generate token with language parameter
-      const token = await generateToken(roomName, participantIdentity, selectedLanguage);
-
-      // Connect to LiveKit room
-      roomRef.current = new Room({
-        adaptiveStream: true,
-        dynacast: true,
+      // Connect to Speechmatics with selected language
+      await connect({ 
+        language: selectedLanguage,
+        enablePartials: false,
+        speakerDiarization: true 
       });
-
-      // Handle data messages from the agent
-      roomRef.current.on(RoomEvent.DataReceived, (payload: Uint8Array, participant?: any) => {
-        const decoder = new TextDecoder();
-        const message = JSON.parse(decoder.decode(payload));
-        
-        if (message.type === 'transcription') {
-          const color = assignColor(message.speaker);
-          
-          setMessages(prev => {
-            // Check if we should merge with the last message
-            if (prev.length > 0) {
-              const lastMessage = prev[prev.length - 1];
-              
-              // If same speaker, merge the text
-              if (lastMessage.speaker === message.speaker) {
-                const updatedMessages = [...prev];
-                updatedMessages[updatedMessages.length - 1] = {
-                  ...lastMessage,
-                  text: lastMessage.text + ' ' + message.text,
-                  timestamp: message.timestamp
-                };
-                return updatedMessages;
-              }
-            }
-            
-            // Different speaker or first message - add as new
-            return [...prev, {
-              speaker: message.speaker,
-              text: message.text,
-              timestamp: message.timestamp,
-              color
-            }];
-          });
-          
-          // Auto-scroll to bottom
-          setTimeout(() => {
-            scrollViewRef.current?.scrollTo({ 
-              top: scrollViewRef.current.scrollHeight, 
-              behavior: 'smooth' 
-            });
-          }, 100);
-        }
-      });
-
-      // Connect to the room
-      await roomRef.current.connect(LIVEKIT_URL, token);
       
-      // Enable microphone
-      await roomRef.current.localParticipant.setMicrophoneEnabled(true);
-      
-      setIsRecording(true);
-      setIsConnecting(false);
+      // Start recording audio
+      await startRecording();
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Failed to start recording. Please check your LiveKit configuration.');
-      setIsConnecting(false);
+      alert('Failed to start recording. Please try again.');
+      setShowWelcome(true);
     }
   };
 
-  const stopRecording = async () => {
+  const handleStopRecording = async () => {
     try {
-      if (roomRef.current) {
-        await roomRef.current.localParticipant.setMicrophoneEnabled(false);
-        await roomRef.current.disconnect();
-        roomRef.current = null;
-      }
+      await stopRecording();
     } catch (error) {
       console.error('Error stopping recording:', error);
     } finally {
-      setIsRecording(false);
       setShowWelcome(true);
-      setMessages([]);
+      setDisplayMessages([]);
       setSpeakerColors(new Map());
-      speakerColorsRef.current = new Map();
       colorIndexRef.current = 0;
     }
   };
 
+  // Update display messages when new transcription messages arrive
   useEffect(() => {
-    return () => {
-      if (roomRef.current) {
-        roomRef.current.disconnect();
-      }
-    };
-  }, []);
+    const newDisplayMessages = messages.map(msg => ({
+      ...msg,
+      color: assignColor(msg.speaker)
+    }));
+    setDisplayMessages(newDisplayMessages);
+    
+    // Auto-scroll to bottom
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ 
+        top: scrollViewRef.current.scrollHeight, 
+        behavior: 'smooth' 
+      });
+    }, 100);
+  }, [messages]);
+
+  // Show error if any
+  useEffect(() => {
+    if (error) {
+      console.error('Speechmatics error:', error);
+    }
+  }, [error]);
 
   return (
     <div style={styles.container}>
@@ -249,16 +161,16 @@ export default function ConversationScreen() {
           <div style={styles.recordButtonContainer}>
             <button
               style={styles.recordButton}
-              onClick={startRecording}
-              disabled={isConnecting}
+              onClick={handleStartRecording}
+              disabled={isConnected && !isRecording}
               onMouseEnter={(e) => {
-                if (!isConnecting) e.currentTarget.style.transform = 'scale(1.1)';
+                if (!isConnected) e.currentTarget.style.transform = 'scale(1.1)';
               }}
               onMouseLeave={(e) => {
-                if (!isConnecting) e.currentTarget.style.transform = 'scale(1)';
+                if (!isConnected) e.currentTarget.style.transform = 'scale(1)';
               }}
             >
-              {isConnecting ? (
+              {isConnected && !isRecording ? (
                 <div style={styles.connectingText}>Connecting...</div>
               ) : (
                 <div style={styles.recordButtonInner} />
@@ -271,6 +183,12 @@ export default function ConversationScreen() {
               Microphone access is required. Please enable it in your browser settings.
             </div>
           )}
+
+          {error && (
+            <div style={styles.permissionError}>
+              {error}
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -278,7 +196,7 @@ export default function ConversationScreen() {
             ref={scrollViewRef}
             style={styles.messagesContainer}
           >
-            {messages.map((msg, index) => (
+            {displayMessages.map((msg, index) => (
               <div 
                 key={index} 
                 style={{
@@ -286,7 +204,12 @@ export default function ConversationScreen() {
                   backgroundColor: msg.color
                 }}
               >
-                {msg.text}
+                <div style={styles.speakerLabel}>
+                  Speaker {msg.speaker}
+                </div>
+                <div style={styles.messageText}>
+                  {msg.text}
+                </div>
               </div>
             ))}
           </div>
@@ -297,13 +220,26 @@ export default function ConversationScreen() {
                 ...styles.floatingButton,
                 ...(isRecording ? styles.floatingButtonActive : {})
               }}
-              onClick={isRecording ? stopRecording : startRecording}
+              onClick={isRecording ? handleStopRecording : handleStartRecording}
             >
               <div style={{
                 ...styles.floatingButtonInner,
                 ...(isRecording ? styles.floatingButtonInnerActive : {})
               }} />
             </button>
+          </div>
+
+          {/* Status bar */}
+          <div style={styles.statusBar}>
+            <div style={styles.statusItem}>
+              {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+            </div>
+            <div style={styles.statusItem}>
+              {isRecording ? '🎙️ Recording' : '⏸️ Not Recording'}
+            </div>
+            <div style={styles.statusItem}>
+              Language: {selectedLanguage.toUpperCase()}
+            </div>
           </div>
         </>
       )}
@@ -407,6 +343,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '50%',
     backgroundColor: '#FFFFFF',
   },
+  connectingText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 600,
+  },
   messagesContainer: {
     flex: 1,
     padding: 16,
@@ -421,6 +362,14 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 18,
     maxWidth: '75%',
     color: '#FFFFFF',
+  },
+  speakerLabel: {
+    fontSize: 12,
+    opacity: 0.8,
+    marginBottom: 4,
+    fontWeight: 600,
+  },
+  messageText: {
     fontSize: 16,
     lineHeight: 1.4,
   },
@@ -455,6 +404,22 @@ const styles: Record<string, React.CSSProperties> = {
     width: 16,
     height: 16,
     borderRadius: 2,
+  },
+  statusBar: {
+    position: 'fixed',
+    bottom: 20,
+    left: 20,
+    display: 'flex',
+    gap: 16,
+    flexWrap: 'wrap',
+  },
+  statusItem: {
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    color: '#FFFFFF',
+    padding: '8px 12px',
+    borderRadius: 16,
+    fontSize: 12,
+    backdropFilter: 'blur(10px)',
   },
   permissionError: {
     position: 'absolute',
