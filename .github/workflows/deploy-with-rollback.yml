@@ -319,11 +319,12 @@ jobs:
       - name: Extract deployment package
         run: tar -xzf deployment-package.tar.gz
         
-      - name: Pre-deployment backup
-        run: |
-          echo "💾 Creating pre-deployment backup..."
-          bash scripts/pre-migration-backup.sh
-          echo "✅ Backup completed"
+      # Backup step disabled - not needed for Vercel deployment
+      # - name: Pre-deployment backup
+      #   run: |
+      #     echo "💾 Creating pre-deployment backup..."
+      #     bash scripts/pre-migration-backup.sh
+      #     echo "✅ Backup completed"
           
       - name: Execute blue-green deployment
         id: deploy
