@@ -5,9 +5,6 @@ if (typeof window === 'undefined') {
   require('event-target-polyfill');
 }
 
-// Import Speechmatics client for React
-import { useRealtimeTranscription } from '@speechmatics/real-time-client-react';
-
 interface TranscriptionMessage {
   speaker: string;
   text: string;
@@ -30,24 +27,8 @@ export const useSpeechmaticsTranscription = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-
-  // Use Speechmatics React hook
-  const { startTranscription, stopTranscription, sendAudio } = useRealtimeTranscription({
-    onMessage: (message: any) => {
-      if (message.message === 'RecognitionStarted') {
-        setIsConnected(true);
-        setError(null);
-      } else if (message.message === 'AddTranscript') {
-        handleTranscript(message);
-      } else if (message.message === 'Error') {
-        setError(message.error || 'Transcription error');
-        setIsConnected(false);
-      } else if (message.message === 'EndOfStream') {
-        setIsConnected(false);
-        setIsRecording(false);
-      }
-    }
-  });
+  const wsRef = useRef<WebSocket | null>(null);
+  const jwtRef = useRef<string | null>(null);
 
   const handleTranscript = (message: any) => {
     try {
@@ -129,29 +110,83 @@ export const useSpeechmaticsTranscription = () => {
       }
       
       const { jwt } = await response.json();
+      jwtRef.current = jwt;
       
-      // Start Speechmatics transcription
-      await startTranscription(jwt, {
-        transcription_config: {
-          language: config.language,
-          operating_point: 'enhanced',
-          enable_partials: config.enablePartials ?? true,
-          max_delay: 2,
-          ...(config.speakerDiarization && { 
-            diarization: 'speaker' 
-          })
+      // Connect to Speechmatics WebSocket
+      const wsUrl = 'wss://eu2.rt.speechmatics.com/v2';
+      wsRef.current = new WebSocket(wsUrl, [], {
+        headers: {
+          'Authorization': `Bearer ${jwt}`
         }
-      });
+      } as any);
+      
+      wsRef.current.onopen = () => {
+        console.log('Connected to Speechmatics');
+        
+        // Send StartRecognition message
+        const startMessage = {
+          message: 'StartRecognition',
+          audio_format: {
+            type: 'raw',
+            encoding: 'pcm_s16le',
+            sample_rate: 16000
+          },
+          transcription_config: {
+            language: config.language,
+            operating_point: 'enhanced',
+            enable_partials: config.enablePartials ?? true,
+            max_delay: 2,
+            ...(config.speakerDiarization && { 
+              diarization: 'speaker' 
+            })
+          }
+        };
+        
+        wsRef.current?.send(JSON.stringify(startMessage));
+      };
+      
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          if (message.message === 'RecognitionStarted') {
+            setIsConnected(true);
+            setError(null);
+          } else if (message.message === 'AddTranscript') {
+            handleTranscript(message);
+          } else if (message.message === 'Error') {
+            setError(message.error || 'Transcription error');
+            setIsConnected(false);
+          } else if (message.message === 'EndOfStream') {
+            setIsConnected(false);
+            setIsRecording(false);
+          }
+        } catch (err) {
+          console.error('Error parsing message:', err);
+        }
+      };
+      
+      wsRef.current.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        setError('Connection error');
+        setIsConnected(false);
+      };
+      
+      wsRef.current.onclose = () => {
+        console.log('WebSocket closed');
+        setIsConnected(false);
+        setIsRecording(false);
+      };
       
     } catch (err: any) {
       console.error('Connection error:', err);
       setError(err.message || 'Failed to connect to Speechmatics');
     }
-  }, [startTranscription]);
+  }, []);
 
   const startRecording = useCallback(async () => {
     try {
-      if (!isConnected) {
+      if (!isConnected || !wsRef.current) {
         throw new Error('Not connected to Speechmatics');
       }
 
@@ -177,7 +212,7 @@ export const useSpeechmaticsTranscription = () => {
       processorRef.current = processor;
       
       processor.onaudioprocess = (event) => {
-        if (isRecording) {
+        if (isRecording && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
           const inputBuffer = event.inputBuffer;
           const audioData = inputBuffer.getChannelData(0);
           
@@ -188,7 +223,7 @@ export const useSpeechmaticsTranscription = () => {
           }
           
           // Send audio data to Speechmatics
-          sendAudio(pcmData.buffer);
+          wsRef.current.send(pcmData.buffer);
         }
       };
       
@@ -201,7 +236,7 @@ export const useSpeechmaticsTranscription = () => {
       console.error('Recording error:', err);
       setError(err.message || 'Failed to start recording');
     }
-  }, [isConnected, isRecording, sendAudio]);
+  }, [isConnected, isRecording]);
 
   const stopRecording = useCallback(async () => {
     try {
@@ -223,8 +258,12 @@ export const useSpeechmaticsTranscription = () => {
         mediaStreamRef.current = null;
       }
       
-      // End transcription
-      await stopTranscription();
+      // Send EndOfStream message and close WebSocket
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ message: 'EndOfStream' }));
+        wsRef.current.close();
+        wsRef.current = null;
+      }
       
       // Reset state
       setMessages([]);
@@ -235,7 +274,7 @@ export const useSpeechmaticsTranscription = () => {
       console.error('Stop recording error:', err);
       setError(err.message || 'Error stopping recording');
     }
-  }, [stopTranscription]);
+  }, []);
 
   return {
     messages,
